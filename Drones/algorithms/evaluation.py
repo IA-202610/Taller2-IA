@@ -1,45 +1,84 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from algorithms import utils as u
+import math
 
 
 if TYPE_CHECKING:
     from world.game_state import GameState
 
+_revisitas: dict[tuple[int, int], int] = {}
 
 def evaluation_function(state: GameState) -> float:
-    """
-    Evaluation function for non-terminal states of the drone vs. hunters game.
+    #Casos base (terminales)
+    if state.is_lose():
+        return -1000
+    if state.is_win():
+        return 1000
 
-    A good evaluation function can consider multiple factors, such as:
-      (a) BFS distance from drone to nearest delivery point (closer is better).
-          Uses actual path distance so walls and terrain are respected.
-      (b) BFS distance from each hunter to the drone, traversing only normal
-          terrain ('.' / ' ').  Hunters blocked by mountains, fog, or storms
-          are treated as unreachable (distance = inf) and pose no threat.
-      (c) BFS distance to a "safe" position (i.e., a position that is not in the path of any hunter).
-      (d) Number of pending deliveries (fewer is better).
-      (e) Current score (higher is better).
-      (f) Delivery urgency: reward the drone for being close to a delivery it can
-          reach strictly before any hunter, so it commits to nearby pickups
-          rather than oscillating in place out of excessive hunter fear.
-      (g) Adding a revisit penalty can help prevent the drone from getting stuck in cycles.
+    score = state.get_score()
+    dron = state.get_drone_position()
+    layout = state.get_layout()
+    pendientes = state.get_pending_deliveries()
+    hunters = state.get_hunter_positions()
 
-    Returns a value in [-1000, +1000].
+    #Valor base -> puntaje actual
+    utilidad = float(state.get_score())
 
-    Tips:
-    - Use state.get_drone_position() to get the drone's current (x, y) position.
-    - Use state.get_hunter_positions() to get the list of hunter (x, y) positions.
-    - Use state.get_pending_deliveries() to get the set of pending delivery (x, y) positions.
-    - Use state.get_score() to get the current game score.
-    - Use state.get_layout() to get the current layout.
-    - Use state.is_win() and state.is_lose() to check terminal states.
-    - Use bfs_distance(layout, start, goal, hunter_restricted) from algorithms.utils
-      for cached BFS distances. hunter_restricted=True for hunter-only terrain.
-    - Use dijkstra(layout, start, goal) from algorithms.utils for cached
-      terrain-weighted shortest paths, returning (cost, path).
-    - Consider edge cases: no pending deliveries, no hunters nearby.
-    - A good evaluation function balances delivery progress with hunter avoidance.
-    """
-    # TODO: Implement your code here
-    return 0.0
+    #Ubicar el objetivo más accesible con Dijstra
+    #Osea, el delivery al que coste menos llegar
+    menor_costo_d = float('inf')
+    d_selec = None
+    
+    for delivery in pendientes:
+        costo = u.bfs_distance(layout, dron, delivery)
+        if costo < menor_costo_d:
+            menor_costo_d = costo
+            d_selec = delivery
+  
+    #penalización por distancia al delivery más cercano (d_selec)
+    utilidad -= menor_costo_d
+
+    #Analizar q tan seguro es el objetivo q seleccionó
+    if d_selec:
+        dist_hunter = float('inf') #Cercanía del DRON al HUNTER
+        dist_hunter_d = float('inf') #Cercanía del HUNTER al DELIVERY <--- AMENAZA
+
+        for hunter in hunters:
+            #Del hunter al dron
+            dr_h = u.bfs_distance(layout, dron, hunter)
+            if dr_h < dist_hunter:
+                dist_hunter = dr_h
+            
+            #Del hunter al delivery
+            h_del = u.bfs_distance(layout, hunter, d_selec, hunter_restricted=True)
+            if h_del < dist_hunter_d:
+                dist_hunter_d = h_del
+
+        #Acá se evalúa el riesgo según cercanía del hunter
+        #PELIGRO EXTREMO!!! el hunter está a 1 paso del dron
+        if dist_hunter <= 1:
+            utilidad -= 1000.0 
+        #Si está a 4 o más pasos da más o menos igual así que se le resta mucho más poco
+        elif dist_hunter >= 4:
+            utilidad -= (100.0 / dist_hunter)
+
+        #Se incentiva que el dron llegue al paquete antes que el cazador más cercano al d_selec
+        if menor_costo_d < dist_hunter_d:
+            utilidad += 200.0
+
+        #Castigo por deliveries pendientes
+        faltan = len(state.get_pending_deliveries())
+        utilidad -= faltan * 60
+
+        #por si tiene el último deliver al PUTO LADO
+        if faltan == 1 and menor_costo_d <= 1:
+            utilidad += 1000
+
+        #Revisitar la misma putisima celda
+        visitas = _revisitas.get(dron, 0)
+        if visitas > 0:
+            utilidad -= (visitas ** 2) * 10
+
+    return float(utilidad)
