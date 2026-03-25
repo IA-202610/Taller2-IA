@@ -138,7 +138,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     value = max(value, alphabeta(successor, next_depth, next_agent, alpha, beta))
                     if value > beta:          # Poda: MAX no necesita explorar más
                         return value
-                    alpha = max(alpha, value) # Actualizamos la mejor garantía de MAX
+                    alpha = max(alpha, value) # Actualiza la mejor garantía de MAX
                 return value
 
             # MIN (hunters)
@@ -149,7 +149,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                     value = min(value, alphabeta(successor, next_depth, next_agent, alpha, beta))
                     if value < alpha:         # Poda: MIN no necesita explorar más
                         return value
-                    beta = min(beta, value)   # Actualizamos la mejor garantía de MIN
+                    beta = min(beta, value)   # Actualiza la mejor garantía de MIN
                 return value
 
         # Mejor acción (igual que en Minimax)
@@ -190,7 +190,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     def get_action(self, state: GameState) -> Directions | None:
         
         def expectimax (state, depth, agent_index):
-            #caso vase
+            #caso base
             if state.is_win() or state.is_lose() or depth == 0:
                 return self.evaluation_function(state)
 
@@ -227,12 +227,9 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         best_score = -float("inf")
         best_actions = []
         
-        # Igual que en minimax se quita el stop para q no quede ahí
         legal_actions = state.get_legal_actions(0)
-        drone_actions = [a for a in legal_actions if a != 'Stop']
-        if not drone_actions: drone_actions = ['Stop']
 
-        for action in drone_actions:
+        for action in legal_actions:
             successor = state.generate_successor(0, action)
             score = expectimax(successor, self.depth, 1)
             
