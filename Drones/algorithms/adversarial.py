@@ -65,8 +65,56 @@ class MinimaxAgent(MultiAgentSearchAgent):
         - The next agent is (agent_index + 1) % num_agents. Depth decreases after all agents have moved (full ply).
         - Return the ACTION (not the value) that maximizes the minimax value for the drone.
         """
-        # TODO: Implement your code here
-        return None
+        def minimax(state, depth, agent_index):
+            #caso base
+            if state.is_win() or state.is_lose() or depth == 0:
+                return self.evaluation_function(state)
+            
+            num_agents = state.get_num_agents()
+            next_agent = (agent_index + 1) % num_agents
+            next_depth = depth - 1 if next_agent == 0 else depth
+
+            #MAX 
+            if agent_index == 0:
+                value = -float("inf")
+                for action in state.get_legal_actions(agent_index):
+                    succesor = state.generate_successor(agent_index, action)
+                    value = max(value, minimax(succesor, next_depth, next_agent))
+                return value
+            
+            #MIN
+            else:
+                value = float("inf")
+                for action in state.get_legal_actions(agent_index):
+                    succesor = state.generate_successor(agent_index, action)
+                    value = min(value, minimax(succesor, next_depth, next_agent))
+                return value
+        
+        #Mejor accion
+        legal_actions = state.get_legal_actions(0)
+
+        # Solo quitamos 'Stop' si hay otras opciones disponibles, 
+        # para no romper el juego si el dron estuviera atrapado.
+        actions = [a for a in legal_actions if a != 'Stop']
+        if not actions:
+            actions = ['Stop'] 
+
+        best_value = -float("inf")
+        best_actions = []
+
+        for action in actions:
+            successor = state.generate_successor(0, action)
+            # Llamamos al minimax para el primer Hunter (agente 1)
+            value = minimax(successor, self.depth, 1)
+
+            if value > best_value:
+                best_value = value
+                best_actions = [action]
+            elif value == best_value:
+                best_actions.append(action)
+
+        import random
+        return random.choice(best_actions)
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
