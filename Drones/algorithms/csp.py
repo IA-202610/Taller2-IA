@@ -100,8 +100,78 @@ def backtracking_ac3(csp: DroneAssignmentCSP) -> dict[str, str] | None:
       - an ac3 function that manages the queue of arcs to check and calls revise.
       - a backtrack function that integrates AC-3 into the search process.
     """
-    # TODO: Implement your code here
-    return None
+    from collections import deque
+    import copy
+
+    def values_compatible(Xi, vi, Xj, vj):
+        assignment = {Xi: vi}
+        return csp.is_consistent(Xj, vj, assignment)
+
+    def revise(Xi, Xj):
+        revised = False
+
+        for vi in csp.domains[Xi][:]:
+            if not any(values_compatible(Xi, vi, Xj, vj) for vj in csp.domains[Xj]):
+                csp.domains[Xi].remove(vi)
+                revised = True
+
+        return revised
+
+    def ac3(queue):
+        while queue:
+            Xi, Xj = queue.popleft()
+
+            if revise(Xi, Xj):
+                if len(csp.domains[Xi]) == 0:
+                    return False
+
+                for Xk in csp.get_neighbors(Xi):
+                    if Xk != Xj:
+                        queue.append((Xk, Xi))
+
+        return True
+
+    def backtrack(assignment):
+        if csp.is_complete(assignment):
+            return assignment
+
+        var = csp.get_unassigned_variables(assignment)[0]
+
+        for value in csp.domains[var][:]:
+            if csp.is_consistent(var, value, assignment):
+
+                saved_domains = {v: csp.domains[v][:] for v in csp.domains}
+
+                csp.assign(var, value, assignment)
+
+                queue = deque()
+                for neighbor in csp.get_neighbors(var):
+                    queue.append((neighbor, var))
+
+                if ac3(queue):
+                    result = backtrack(assignment)
+                    if result is not None:
+                        return result
+
+                for v in csp.domains:
+                    csp.domains[v] = saved_domains[v][:]
+
+                csp.unassign(var, assignment)
+
+        return None
+
+    from collections import deque
+    initial_queue = deque()
+
+    for Xi in csp.domains:
+        for Xj in csp.get_neighbors(Xi):
+            initial_queue.append((Xi, Xj))
+
+    if not ac3(initial_queue):
+        return None
+
+    return backtrack({})
+    
 
 
 def backtracking_mrv_lcv(csp: DroneAssignmentCSP) -> dict[str, str] | None:
@@ -117,4 +187,69 @@ def backtracking_mrv_lcv(csp: DroneAssignmentCSP) -> dict[str, str] | None:
     - Use csp.get_num_conflicts(var, value, assignment) to count how many values would be ruled out for neighbors if var=value is assigned.
     """
     # TODO: Implement your code here (BONUS)
-    return None
+    def select_unassigned_variable(assignment):
+        unassigned = csp.get_unassigned_variables(assignment)
+
+        mrv = min(unassigned, key=lambda var: len(csp.domains[var]))
+
+        min_size = len(csp.domains[mrv])
+        candidates = [v for v in unassigned if len(csp.domains[v]) == min_size]
+
+        if len(candidates) > 1:
+            return max(candidates, key=lambda var: len([
+                n for n in csp.get_neighbors(var) if n not in assignment
+            ]))
+
+        return mrv
+
+    def order_domain_values(var, assignment):
+        return sorted(
+            csp.domains[var],
+            key=lambda value: csp.get_num_conflicts(var, value, assignment)
+        )
+
+    def forward_check(var, assignment):
+        removed = {}
+
+        for neighbor in csp.get_neighbors(var):
+            if neighbor not in assignment:
+                removed[neighbor] = []
+
+                for value in csp.domains[neighbor][:]:
+                    if not csp.is_consistent(neighbor, value, assignment):
+                        csp.domains[neighbor].remove(value)
+                        removed[neighbor].append(value)
+
+                if len(csp.domains[neighbor]) == 0:
+                    return False, removed
+
+        return True, removed
+
+    def restore_domains(removed):
+        for var in removed:
+            csp.domains[var].extend(removed[var])
+
+    def backtrack(assignment):
+        if csp.is_complete(assignment):
+            return assignment
+
+        var = select_unassigned_variable(assignment)
+
+        for value in order_domain_values(var, assignment):
+            if csp.is_consistent(var, value, assignment):
+
+                csp.assign(var, value, assignment)
+
+                ok, removed = forward_check(var, assignment)
+
+                if ok:
+                    result = backtrack(assignment)
+                    if result is not None:
+                        return result
+
+                restore_domains(removed)
+                csp.unassign(var, assignment)
+
+        return None
+
+    return backtrack({})
