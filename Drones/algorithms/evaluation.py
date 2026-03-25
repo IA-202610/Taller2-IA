@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from algorithms import utils as u
+import math
 
 
 if TYPE_CHECKING:
     from world.game_state import GameState
 
+_revisitas: dict[tuple[int, int], int] = {}
 
 def evaluation_function(state: GameState) -> float:
     #Casos base (terminales)
@@ -30,7 +32,7 @@ def evaluation_function(state: GameState) -> float:
     d_selec = None
     
     for delivery in pendientes:
-        costo = u.dijkstra(layout, dron, delivery)[0]
+        costo = u.bfs_distance(layout, dron, delivery)
         if costo < menor_costo_d:
             menor_costo_d = costo
             d_selec = delivery
@@ -65,5 +67,18 @@ def evaluation_function(state: GameState) -> float:
         #Se incentiva que el dron llegue al paquete antes que el cazador más cercano al d_selec
         if menor_costo_d < dist_hunter_d:
             utilidad += 200.0
+
+        #Castigo por deliveries pendientes
+        faltan = len(state.get_pending_deliveries())
+        utilidad -= faltan * 60
+
+        #por si tiene el último deliver al PUTO LADO
+        if faltan == 1 and menor_costo_d <= 1:
+            utilidad += 1000
+
+        #Revisitar la misma putisima celda
+        visitas = _revisitas.get(dron, 0)
+        if visitas > 0:
+            utilidad -= (visitas ** 2) * 10
 
     return float(utilidad)

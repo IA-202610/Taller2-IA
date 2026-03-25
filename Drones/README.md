@@ -349,30 +349,30 @@ python main.py -m adversarial -a AlphaBetaAgent -p 1.0 -l desperate_run
 ### ExpectimaxAgent — p=0 (cazador greedy)
 
 ```bash
-python main.py -m adversarial -a ExpectimaxAgent -l tiny_hunt
-python main.py -m adversarial -a ExpectimaxAgent -l small_hunt
-python main.py -m adversarial -a ExpectimaxAgent -l open_field
-python main.py -m adversarial -a ExpectimaxAgent -l drone_escape
-python main.py -m adversarial -a ExpectimaxAgent -l supply_run
-python main.py -m adversarial -a ExpectimaxAgent -l swamp_run
-python main.py -m adversarial -a ExpectimaxAgent -l jungle_chase
-python main.py -m adversarial -a ExpectimaxAgent -l contested_territory
-python main.py -m adversarial -a ExpectimaxAgent -l maze_hunt
-python main.py -m adversarial -a ExpectimaxAgent -l mountain_pass
-python main.py -m adversarial -a ExpectimaxAgent -l wide_open
-python main.py -m adversarial -a ExpectimaxAgent -l bottleneck
-python main.py -m adversarial -a ExpectimaxAgent -l gauntlet
-python main.py -m adversarial -a ExpectimaxAgent -l triple_threat
-python main.py -m adversarial -a ExpectimaxAgent -l scattered_hunters
-python main.py -m adversarial -a ExpectimaxAgent -l terrain_trap
-python main.py -m adversarial -a ExpectimaxAgent -l storm_tunnel
-python main.py -m adversarial -a ExpectimaxAgent -l arena
-python main.py -m adversarial -a ExpectimaxAgent -l hunter_cage
-python main.py -m adversarial -a ExpectimaxAgent -l tunnel_escape
-python main.py -m adversarial -a ExpectimaxAgent -l mountain_overfly
-python main.py -m adversarial -a ExpectimaxAgent -l hunter_swarm
-python main.py -m adversarial -a ExpectimaxAgent -l pacman_maze
-python main.py -m adversarial -a ExpectimaxAgent -l desperate_run
+python main.py -m adversarial -a ExpectimaxAgent -l tiny_hunt + +
+python main.py -m adversarial -a ExpectimaxAgent -l small_hunt + +
+python main.py -m adversarial -a ExpectimaxAgent -l open_field + +
+python main.py -m adversarial -a ExpectimaxAgent -l drone_escape + +
+python main.py -m adversarial -a ExpectimaxAgent -l supply_run + +
+python main.py -m adversarial -a ExpectimaxAgent -l swamp_run + +
+python main.py -m adversarial -a ExpectimaxAgent -l jungle_chase - - 
+python main.py -m adversarial -a ExpectimaxAgent -l contested_territory + +
+python main.py -m adversarial -a ExpectimaxAgent -l maze_hunt - -
+python main.py -m adversarial -a ExpectimaxAgent -l mountain_pass - +
+python main.py -m adversarial -a ExpectimaxAgent -l wide_open - + 
+python main.py -m adversarial -a ExpectimaxAgent -l bottleneck + +
+python main.py -m adversarial -a ExpectimaxAgent -l gauntlet - +
+python main.py -m adversarial -a ExpectimaxAgent -l triple_threat - -
+python main.py -m adversarial -a ExpectimaxAgent -l scattered_hunters - -
+python main.py -m adversarial -a ExpectimaxAgent -l terrain_trap + +
+python main.py -m adversarial -a ExpectimaxAgent -l storm_tunnel - + 
+python main.py -m adversarial -a ExpectimaxAgent -l arena - -
+python main.py -m adversarial -a ExpectimaxAgent -l hunter_cage - +
+python main.py -m adversarial -a ExpectimaxAgent -l tunnel_escape + +
+python main.py -m adversarial -a ExpectimaxAgent -l mountain_overfly - +
+python main.py -m adversarial -a ExpectimaxAgent -l hunter_swarm - -
+python main.py -m adversarial -a ExpectimaxAgent -l pacman_maze - -
+python main.py -m adversarial -a ExpectimaxAgent -l desperate_run - -
 ```
 
 ### ExpectimaxAgent — p=0.3 (cazador mixto 30% aleatorio)
