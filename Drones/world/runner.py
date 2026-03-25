@@ -287,6 +287,8 @@ def run_adversarial_mode(
     """
     Run adversarial game mode.
     """
+    start = time.perf_counter()
+
     if not hasattr(adversarial_module, agent_type):
         raise Exception(
             f"Agent type '{agent_type}' not found in algorithms/adversarial.py"
@@ -333,3 +335,6 @@ def run_adversarial_mode(
         print(f"  Losses: {losses}/{num_games}")
         print(f"  Avg Score: {total_score / num_games:.1f}")
         print("=" * 60)
+
+        end = time.perf_counter()
+        print(f"\n El tiempo total de ejecución fue: {end - start:.3f} segundos")

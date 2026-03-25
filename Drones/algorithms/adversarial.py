@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import time
 from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
 
@@ -23,6 +24,16 @@ class MultiAgentSearchAgent(Agent, ABC):
             prob
         )  # Probability that each hunter acts randomly (0=greedy, 1=random)
         self.evaluation_function = evaluation.evaluation_function
+        self.stats = {}
+        self.stats = {"nodes_expanded": 0, "prunings": 0, "elapsed_time": 0.0}
+
+    def _reset_stats(self, agent_name: str) -> None:
+        self.stats = {
+            "agent": agent_name,
+            "nodes_expanded": 0,
+            "prunings": 0,
+            "elapsed_time": 0.0,
+        }
 
     @abstractmethod
     def get_action(self, state: GameState) -> Directions | None:
@@ -65,33 +76,42 @@ class MinimaxAgent(MultiAgentSearchAgent):
         - The next agent is (agent_index + 1) % num_agents. Depth decreases after all agents have moved (full ply).
         - Return the ACTION (not the value) that maximizes the minimax value for the drone.
         """
+        self._reset_stats("MinimaxAgent")
+        start = time.perf_counter()
+
         def minimax(state, depth, agent_index):
-            #caso base
+            self.stats["nodes_expanded"] += 1
+
+            # caso base
             if state.is_win() or state.is_lose() or depth == 0:
                 return self.evaluation_function(state)
-            
+
             num_agents = state.get_num_agents()
             next_agent = (agent_index + 1) % num_agents
             next_depth = depth - 1 if next_agent == 0 else depth
 
-            #MAX 
+            # MAX
             if agent_index == 0:
                 value = -float("inf")
                 for action in state.get_legal_actions(agent_index):
                     succesor = state.generate_successor(agent_index, action)
                     value = max(value, minimax(succesor, next_depth, next_agent))
                 return value
-            
-            #MIN
+
+            # MIN
             else:
                 value = float("inf")
                 for action in state.get_legal_actions(agent_index):
                     succesor = state.generate_successor(agent_index, action)
                     value = min(value, minimax(succesor, next_depth, next_agent))
                 return value
-        
-        #Mejor accion
+
+        # Mejor accion
         legal_actions = state.get_legal_actions(0)
+        if not legal_actions:
+            self.stats["elapsed_time"] = time.perf_counter() - start
+            return None
+
         best_value = -float("inf")
         best_actions = []
 
@@ -107,21 +127,28 @@ class MinimaxAgent(MultiAgentSearchAgent):
                 best_actions.append(action)
 
         import random
+
         chosen = random.choice(best_actions)
-        
+
         successor = state.generate_successor(0, chosen)
         new_pos = successor.get_drone_position()
         from algorithms.evaluation import _revisitas
+
         _revisitas[new_pos] = _revisitas.get(new_pos, 0) + 1
 
+        self.stats["elapsed_time"] = time.perf_counter() - start
         return chosen
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
 
     def get_action(self, state: GameState) -> Directions | None:
+        self._reset_stats("AlphaBetaAgent")
+        start = time.perf_counter()
 
         def alphabeta(state, depth, agent_index, alpha, beta):
+            self.stats["nodes_expanded"] += 1
+
             # Caso base
             if state.is_win() or state.is_lose() or depth == 0:
                 return self.evaluation_function(state)
@@ -135,10 +162,13 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 value = -float("inf")
                 for action in state.get_legal_actions(agent_index):
                     successor = state.generate_successor(agent_index, action)
-                    value = max(value, alphabeta(successor, next_depth, next_agent, alpha, beta))
-                    if value > beta:          # Poda: MAX no necesita explorar más
+                    value = max(
+                        value, alphabeta(successor, next_depth, next_agent, alpha, beta)
+                    )
+                    if value > beta:  # Poda: MAX no necesita explorar más
+                        self.stats["prunings"] += 1
                         return value
-                    alpha = max(alpha, value) # Actualiza la mejor garantía de MAX
+                    alpha = max(alpha, value)  # Actualiza la mejor garantía de MAX
                 return value
 
             # MIN (hunters)
@@ -146,22 +176,25 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 value = float("inf")
                 for action in state.get_legal_actions(agent_index):
                     successor = state.generate_successor(agent_index, action)
-                    value = min(value, alphabeta(successor, next_depth, next_agent, alpha, beta))
-                    if value < alpha:         # Poda: MIN no necesita explorar más
+                    value = min(
+                        value, alphabeta(successor, next_depth, next_agent, alpha, beta)
+                    )
+                    if value < alpha:  # Poda: MIN no necesita explorar más
+                        self.stats["prunings"] += 1
                         return value
-                    beta = min(beta, value)   # Actualiza la mejor garantía de MIN
+                    beta = min(beta, value)  # Actualiza la mejor garantía de MIN
                 return value
 
         # Mejor acción (igual que en Minimax)
         legal_actions = state.get_legal_actions(0)
-        actions = [a for a in legal_actions if a != 'Stop']
+        actions = [a for a in legal_actions if a != "Stop"]
         if not actions:
-            actions = ['Stop']
+            actions = ["Stop"]
 
         best_value = -float("inf")
         best_actions = []
         alpha = -float("inf")  # Alpha inicial
-        beta = float("inf")    # Beta inicial
+        beta = float("inf")  # Beta inicial
 
         for action in actions:
             successor = state.generate_successor(0, action)
@@ -176,10 +209,13 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             alpha = max(alpha, best_value)  # Actualizamos alpha en la raíz también
 
         import random
+
+        self.stats["elapsed_time"] = time.perf_counter() - start
         return random.choice(best_actions)
 
 
 import random
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -188,16 +224,20 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     """
 
     def get_action(self, state: GameState) -> Directions | None:
-        
-        def expectimax (state, depth, agent_index):
-            #caso base
+        self._reset_stats("ExpectimaxAgent")
+        start = time.perf_counter()
+
+        def expectimax(state, depth, agent_index):
+            self.stats["nodes_expanded"] += 1
+
+            # caso base
             if state.is_win() or state.is_lose() or depth == 0:
                 return self.evaluation_function(state)
 
             num_agents = state.get_num_agents()
             next_agent = (agent_index + 1) % num_agents
             next_depth = depth - 1 if next_agent == 0 else depth
-            
+
             actions = state.get_legal_actions(agent_index)
             if not actions:
                 return self.evaluation_function(state)
@@ -219,25 +259,27 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
                 min_val = min(child_values)
                 mean_val = sum(child_values) / len(child_values)
-                
-                p = self.prob # Probabilidad de movimiento random
+
+                p = self.prob  # Probabilidad de movimiento random
                 return (1 - p) * min_val + p * mean_val
 
         # Mejor acción
         best_score = -float("inf")
         best_actions = []
-        
+
         legal_actions = state.get_legal_actions(0)
 
         for action in legal_actions:
             successor = state.generate_successor(0, action)
             score = expectimax(successor, self.depth, 1)
-            
+
             if score > best_score:
                 best_score = score
                 best_actions = [action]
             elif abs(score - best_score) < 0.001:
                 best_actions.append(action)
 
-        if not best_actions: return 'Stop'
+        self.stats["elapsed_time"] = time.perf_counter() - start
+        if not best_actions:
+            return "Stop"
         return random.choice(best_actions)
